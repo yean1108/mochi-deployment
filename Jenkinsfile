@@ -1,10 +1,5 @@
 pipeline {
-  agent {
-    docker {
-        image 'docker:20.10.24'
-        args '-v /var/run/docker.sock:/var/run/docker.sock'
-    }
-  }
+  agent any
 
   environment {
     TAG = "${new Date().format('yyyyMMddHHmmss')}"
@@ -22,8 +17,12 @@ pipeline {
     stage('Install Docker CLI') {
       steps {
         sh '''
-          apt-get update
-          apt-get install -y docker.io
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Installing Docker CLI..."
+            apt-get update && apt-get install -y docker.io
+          else
+            echo "Docker already installed"
+          fi
         '''
       }
     }
