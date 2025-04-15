@@ -20,6 +20,7 @@ pipeline {
           sh '''
             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
             docker build -t $IMAGE_NAME:$TAG .
+            docker tag $IMAGE_NAME:$TAG $IMAGE_NAME:latest
             docker push $IMAGE_NAME:$TAG
             docker push $IMAGE_NAME:latest
           '''
@@ -32,15 +33,17 @@ pipeline {
         withCredentials([file(credentialsId: 'KUBECONFIG', variable: 'KUBECONFIG_FILE')]) {
           sh '''
             cp $KUBECONFIG_FILE $KUBECONFIG_PATH
-            kubectl --kubeconfig=$KUBECONFIG_PATH set image deployment/mochi-deployment mochi=$IMAGE_NAME:latest
+            kubectl --kubeconfig=$KUBECONFIG_PATH set image deployment/mochi-deployment mochi=$IMAGE_NAME:$TAG
           '''
         }
       }
     }
   }
-    post {
-        always {
-            sh "docker image prune -f"
-        }
+
+  post {
+    always {
+      echo "Cleaning up dangling images..."
+      sh "docker image prune -f || true"
     }
+  }
 }
