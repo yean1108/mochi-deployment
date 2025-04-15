@@ -2,25 +2,12 @@ pipeline {
   agent any
 
   environment {
+    TAG = "${new Date().format('yyyyMMddHHmmss')}"
     IMAGE_NAME = "yean1108/mochi"
-    KUBECONFIG_PATH = "${WORKSPACE}/kubeconfig"
+    CONTAINER_NAME = "mochi-app"
   }
 
   stages {
-    stage('Set Tag') {
-      steps {
-        script {
-          env.TAG = new Date().format('yyyyMMddHHmmss')
-        }
-      }
-    }
-
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
-
     stage('Install Docker CLI') {
       steps {
         sh '''
@@ -34,7 +21,7 @@ pipeline {
       }
     }
 
-    stage('Docker Build & Push') {
+    stage('Build & Push Image') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'Dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           sh '''
@@ -48,21 +35,25 @@ pipeline {
       }
     }
 
-    stage('Deploy to K8s') {
+    stage('Deploy: Run Locally') {
       steps {
-        withCredentials([file(credentialsId: 'KUBECONFIG', variable: 'KUBECONFIG_FILE')]) {
-          sh '''
-            cp $KUBECONFIG_FILE $KUBECONFIG_PATH
-            kubectl --kubeconfig=$KUBECONFIG_PATH set image deployment/mochi-deployment mochi=$IMAGE_NAME:$TAG
-          '''
-        }
+        sh '''
+          echo "Stopping old container if running..."
+          docker stop $CONTAINER_NAME || true
+          docker rm $CONTAINER_NAME || true
+
+          echo "Starting new container from $IMAGE_NAME:$TAG..."
+          docker run -d --name $CONTAINER_NAME -p 3000:80 $IMAGE_NAME:$TAG
+        '''
       }
     }
   }
 
   post {
+    success {
+      echo "🚀 Mochi app deployed locally at http://localhost:3000"
+    }
     always {
-      echo "Cleaning up dangling images..."
       sh "docker image prune -f || true"
     }
   }
