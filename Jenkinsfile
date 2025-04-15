@@ -14,6 +14,15 @@ pipeline {
       }
     }
 
+    stage('Install Docker CLI') {
+      steps {
+        sh '''
+          apt-get update
+          apt-get install -y docker.io
+        '''
+      }
+    }
+
     stage('Docker Build & Push') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'Dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
