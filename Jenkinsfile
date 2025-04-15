@@ -2,12 +2,19 @@ pipeline {
   agent any
 
   environment {
-    TAG = "${new Date().format('yyyyMMddHHmmss')}"
     IMAGE_NAME = "yean1108/mochi"
     KUBECONFIG_PATH = "${WORKSPACE}/kubeconfig"
   }
 
   stages {
+    stage('Set Tag') {
+      steps {
+        script {
+          env.TAG = new Date().format('yyyyMMddHHmmss')
+        }
+      }
+    }
+
     stage('Checkout') {
       steps {
         checkout scm
